@@ -11,7 +11,10 @@ router.post('/', async (req, res) => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `You are Ravenshire AI, a financial intelligence assistant. Answer the following query concisely and professionally: ${message}`
+      contents: message,
+      config: {
+        systemInstruction: "You are Ravenshire AI, a sophisticated financial intelligence assistant. Provide concise, professional, and data-driven insights. Maintain a high-end institutional tone."
+      }
     });
     res.json({ response: response.text });
   } catch (error) {

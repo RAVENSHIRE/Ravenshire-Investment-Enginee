@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { io } from 'socket.io-client';
 import { 
   Plus, 
   Filter, 
@@ -15,14 +16,15 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  X
+  X,
+  Activity
 } from 'lucide-react';
 
 interface Asset {
   symbol: string;
   name: string;
-  price: string;
-  change: string;
+  price: string | number;
+  change: string | number;
   trend: 'up' | 'down';
   sentiment: string;
   aiInsight: string;
@@ -57,6 +59,40 @@ export const Watchlist: React.FC = () => {
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const socket = io();
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+    });
+
+    socket.on('market-update', (updates: any[]) => {
+      setAssets(prevAssets => 
+        prevAssets.map(asset => {
+          const update = updates.find(u => u.symbol === asset.symbol);
+          if (update) {
+            return {
+              ...asset,
+              price: update.price,
+              change: update.change,
+              trend: update.change >= 0 ? 'up' : 'down'
+            };
+          }
+          return asset;
+        })
+      );
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleAddAsset = () => {
     if (!newSymbol) return;
@@ -177,15 +213,20 @@ export const Watchlist: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {expandedAsset === asset.symbol ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         {asset.symbol}
+                        {isConnected && INITIAL_ASSETS.some(a => a.symbol === asset.symbol) && (
+                          <span className="w-1 h-1 bg-terminal-green rounded-full animate-pulse" />
+                        )}
                       </div>
                     </td>
                     <td className="terminal-grid-cell text-terminal-muted">{asset.name}</td>
-                    <td className="terminal-grid-cell text-right font-mono font-bold">{asset.price}</td>
+                    <td className="terminal-grid-cell text-right font-mono font-bold">
+                      {typeof asset.price === 'number' ? asset.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : asset.price}
+                    </td>
                     <td className={cn(
                       "terminal-grid-cell text-right font-mono font-bold",
                       asset.trend === 'up' ? "text-terminal-green" : "text-terminal-red"
                     )}>
-                      {asset.change}
+                      {typeof asset.change === 'number' ? `${asset.change >= 0 ? '+' : ''}${asset.change}%` : asset.change}
                     </td>
                     <td className="terminal-grid-cell text-center">
                       <span className={cn(

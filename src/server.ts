@@ -1,8 +1,12 @@
 import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { setupMarketDataSocket } from "./api/services/marketDataSocket.js";
 
 // Import routes
 import supplyChainRoutes from "./api/routes/supplyChain.js";
@@ -17,9 +21,21 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
   const PORT = 3000;
 
+  // Middleware
+  app.use(cors());
   app.use(express.json());
+
+  // Setup WebSocket
+  setupMarketDataSocket(io);
 
   // API Routes
   app.use("/api/supply-chain", supplyChainRoutes);
@@ -56,7 +72,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

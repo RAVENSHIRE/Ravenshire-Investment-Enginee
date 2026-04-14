@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { io } from 'socket.io-client';
 import { 
   BrainCircuit, 
   Lightbulb, 
@@ -13,7 +14,8 @@ import {
   BarChart3,
   Loader2,
   Plus,
-  X
+  X,
+  Activity
 } from 'lucide-react';
 import { generateInvestmentStrategy } from '@/services/geminiService';
 
@@ -48,11 +50,49 @@ const INITIAL_THESES: Thesis[] = [
   }
 ];
 
+const THEMES = [
+  { label: 'Generative AI', symbol: 'NVDA' },
+  { label: 'Nuclear Energy', symbol: 'CEG' },
+  { label: 'GLP-1 Pharma', symbol: 'LLY' },
+  { label: 'Digital Assets', symbol: 'BTC' },
+  { label: 'Semiconductors', symbol: 'SOL' }, // Using SOL as a proxy for high-beta tech here
+];
+
 export const StrategySector: React.FC = () => {
   const [theses, setTheses] = useState<Thesis[]>(INITIAL_THESES);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
   const [topic, setTopic] = useState('');
+  const [themeData, setThemeData] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const socket = io();
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+    });
+
+    socket.on('market-update', (updates: any[]) => {
+      const updatedThemes = THEMES.map(theme => {
+        const update = updates.find(u => u.symbol === theme.symbol);
+        return {
+          ...theme,
+          val: update ? `${update.change >= 0 ? '+' : ''}${update.change}%` : '0.0%',
+          trend: update ? (update.change >= 0 ? 'up' : 'down') : 'up'
+        };
+      });
+      setThemeData(updatedThemes);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleGenerate = async () => {
     if (!topic) return;
@@ -259,20 +299,23 @@ export const StrategySector: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom: Thematic Heatmap Placeholder */}
+      {/* Bottom: Thematic Heatmap */}
       <div className="terminal-card">
         <div className="terminal-header">
           <span>Thematic Performance Matrix</span>
-          <BarChart3 className="w-3 h-3" />
+          <div className="flex items-center gap-2">
+            {isConnected && <span className="w-1.5 h-1.5 bg-terminal-green rounded-full animate-pulse" />}
+            <BarChart3 className="w-3 h-3" />
+          </div>
         </div>
         <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
+          {(themeData.length > 0 ? themeData : [
             { label: 'Generative AI', val: '+42.5%', trend: 'up' },
             { label: 'Nuclear Energy', val: '+18.2%', trend: 'up' },
             { label: 'GLP-1 Pharma', val: '+24.1%', trend: 'up' },
-            { label: 'Cybersecurity', val: '-2.4%', trend: 'down' },
+            { label: 'Digital Assets', val: '-2.4%', trend: 'down' },
             { label: 'Semiconductors', val: '+31.8%', trend: 'up' },
-          ].map((theme, i) => (
+          ]).map((theme, i) => (
             <div key={i} className="p-3 bg-terminal-bg border border-terminal-border space-y-1 hover:border-terminal-accent transition-colors cursor-pointer group">
               <div className="text-[10px] font-mono text-terminal-muted uppercase group-hover:text-terminal-accent transition-colors">{theme.label}</div>
               <div className={cn(

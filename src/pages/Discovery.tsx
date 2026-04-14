@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { io } from 'socket.io-client';
 import { 
   Search, 
   Zap, 
@@ -17,10 +18,10 @@ import {
 } from 'lucide-react';
 
 const INITIAL_SIGNALS = [
-  { id: '1', type: 'Unusual Volume', asset: 'RDW', name: 'Redwire Corp', signal: '+450% Vol', desc: 'Massive accumulation in space infrastructure provider ahead of Artemis II milestones.', conviction: 'High', stats: { mktCap: '$450M', pe: 'N/A', volume: '1.2M' } },
-  { id: '2', type: 'Narrative Shift', asset: 'OKLO', name: 'Oklo Inc', signal: 'Nuclear AI', desc: 'Social mentions of "AI Nuclear" up 300% this week. Oklo emerging as key SMR play.', conviction: 'Medium', stats: { mktCap: '$1.2B', pe: 'N/A', volume: '800K' } },
-  { id: '3', type: 'Insider Activity', asset: 'PL', name: 'Planet Labs', signal: 'CEO Buy', desc: 'CEO purchased $2M worth of shares at $22.50. First major buy in 12 months.', conviction: 'High', stats: { mktCap: '$800M', pe: 'N/A', volume: '2.1M' } },
-  { id: '4', type: 'Whale Alert', asset: 'SOL', name: 'Solana', signal: 'Large Inflow', desc: 'Institutional wallet moved $150M SOL from exchange to cold storage.', conviction: 'Medium', stats: { mktCap: '$65B', pe: 'N/A', volume: '$2.4B' } },
+  { id: '1', type: 'Unusual Volume', asset: 'RDW', name: 'Redwire Corp', signal: '+450% Vol', desc: 'Massive accumulation in space infrastructure provider ahead of Artemis II milestones.', conviction: 'High', stats: { mktCap: '$450M', pe: 'N/A', volume: '1.2M' }, price: 8.45 },
+  { id: '2', type: 'Narrative Shift', asset: 'OKLO', name: 'Oklo Inc', signal: 'Nuclear AI', desc: 'Social mentions of "AI Nuclear" up 300% this week. Oklo emerging as key SMR play.', conviction: 'Medium', stats: { mktCap: '$1.2B', pe: 'N/A', volume: '800K' }, price: 14.20 },
+  { id: '3', type: 'Insider Activity', asset: 'PL', name: 'Planet Labs', signal: 'CEO Buy', desc: 'CEO purchased $2M worth of shares at $22.50. First major buy in 12 months.', conviction: 'High', stats: { mktCap: '$800M', pe: 'N/A', volume: '2.1M' }, price: 22.50 },
+  { id: '4', type: 'Whale Alert', asset: 'SOL', name: 'Solana', signal: 'Large Inflow', desc: 'Institutional wallet moved $150M SOL from exchange to cold storage.', conviction: 'Medium', stats: { mktCap: '$65B', pe: 'N/A', volume: '$2.4B' }, price: 345.20 },
 ];
 
 export const Discovery: React.FC = () => {
@@ -28,15 +29,40 @@ export const Discovery: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [matrixStatus, setMatrixStatus] = useState<'loading' | 'ready'>('loading');
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const selectedAssetData = signals.find(s => s.asset === selectedAsset);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-      setMatrixStatus('ready');
-    }, 1500);
-    return () => clearTimeout(timer);
+    const socket = io();
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+    });
+
+    socket.on('market-update', (updates: any[]) => {
+      setSignals(prevSignals => 
+        prevSignals.map(sig => {
+          const update = updates.find(u => u.symbol === sig.asset);
+          if (update) {
+            return {
+              ...sig,
+              price: update.price,
+              signal: `${update.change >= 0 ? '+' : ''}${update.change}%`
+            };
+          }
+          return sig;
+        })
+      );
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleAddToWatchlist = (e: React.MouseEvent, asset: string) => {
@@ -193,12 +219,20 @@ export const Discovery: React.FC = () => {
                   
                   <div className="flex justify-between items-end">
                     <div>
-                      <div className="text-xl font-mono font-bold text-terminal-text group-hover:text-terminal-amber transition-colors">{sig.asset}</div>
+                      <div className="text-xl font-mono font-bold text-terminal-text group-hover:text-terminal-amber transition-colors">
+                        {sig.asset}
+                        {isConnected && (
+                          <span className="ml-2 w-1.5 h-1.5 bg-terminal-green rounded-full inline-block animate-pulse" />
+                        )}
+                      </div>
                       <div className="text-[10px] text-terminal-muted uppercase">{sig.name}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-mono font-bold text-terminal-green">{sig.signal}</div>
-                      <div className="text-[9px] text-terminal-muted uppercase">24h Momentum</div>
+                      <div className={cn(
+                        "text-xs font-mono font-bold",
+                        sig.signal.startsWith('+') ? "text-terminal-green" : "text-terminal-red"
+                      )}>{sig.signal}</div>
+                      <div className="text-[9px] text-terminal-muted uppercase">Live Momentum</div>
                     </div>
                   </div>
                   

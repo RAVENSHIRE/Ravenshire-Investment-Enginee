@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User, Command } from 'lucide-react';
+import { Search, Bell, User, Command, TrendingUp, TrendingDown } from 'lucide-react';
+import { io } from 'socket.io-client';
 
 export const TopBar: React.FC = () => {
   const [search, setSearch] = useState('');
-  const [marketData, setMarketData] = useState<any>(null);
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const fetchMarketData = async () => {
-      try {
-        const response = await fetch('/api/market-data');
-        if (response.ok) {
-          const data = await response.json();
-          setMarketData(data);
-        }
-      } catch (error) {
-        console.error('Market Data Fetch Error:', error);
-      }
-    };
+    const socket = io();
 
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 30000); // Update every 30s
-    return () => clearInterval(interval);
+    socket.on('connect', () => {
+      setIsConnected(true);
+      console.log('Connected to Market Data WebSocket');
+    });
+
+    socket.on('market-update', (data: any[]) => {
+      setMarketData(data);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   return (
@@ -44,23 +49,23 @@ export const TopBar: React.FC = () => {
 
       <div className="flex items-center gap-6">
         <div className="hidden lg:flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest">
-          {marketData ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-terminal-muted">S&P 500</span>
-                <span className={marketData.sp500Change >= 0 ? "text-terminal-green" : "text-terminal-red"}>
-                  {marketData.sp500.toLocaleString()} ({marketData.sp500Change >= 0 ? '+' : ''}{marketData.sp500Change}%)
+          {marketData.length > 0 ? (
+            marketData.map((stock) => (
+              <div key={stock.symbol} className="flex items-center gap-2">
+                <span className="text-terminal-muted">{stock.symbol}</span>
+                <span className={stock.change >= 0 ? "text-terminal-green" : "text-terminal-red"}>
+                  {stock.price.toLocaleString()} 
+                  <span className="ml-1 text-[8px]">
+                    ({stock.change >= 0 ? '+' : ''}{stock.change}%)
+                  </span>
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-terminal-muted">BTC/USD</span>
-                <span className={marketData.btcChange >= 0 ? "text-terminal-green" : "text-terminal-red"}>
-                  {marketData.btc.toLocaleString()} ({marketData.btcChange >= 0 ? '+' : ''}{marketData.btcChange}%)
-                </span>
-              </div>
-            </>
+            ))
           ) : (
-            <div className="animate-pulse text-terminal-muted">Loading Market Feed...</div>
+            <div className="animate-pulse text-terminal-muted flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-terminal-green' : 'bg-terminal-red'}`} />
+              Connecting to Live Feed...
+            </div>
           )}
         </div>
 
