@@ -33,7 +33,7 @@ export function setupMarketDataSocket(io: Server) {
     const stockStream = alpaca.data_stream_v2;
     const cryptoStream = (alpaca as any).crypto_stream_v2;
 
-    const stockSymbols = ["NVDA", "SPY", "LLY", "CEG", "TSLA", "RDW", "OKLO", "PL"];
+    const stockSymbols = ["NVDA", "SPY", "LLY", "CEG", "TSLA", "RDW", "OKLO", "PL", "USO"];
     const cryptoSymbols = ["BTC/USD", "SOL/USD"];
 
     // Handle Stock Updates
@@ -43,11 +43,18 @@ export function setupMarketDataSocket(io: Server) {
     });
 
     stockStream.onStockTrade((trade: any) => {
-      const stock = stocks.find(s => s.symbol === trade.Symbol);
+      // Alpaca SDK v2 maps raw 'S' to 'symbol' and 'p' to 'price'
+      const symbol = trade.symbol || trade.Symbol || trade.S;
+      const price = trade.price || trade.Price || trade.p;
+      
+      if (!symbol || !price) return;
+
+      // Map USO back to OIL for the UI if needed
+      const targetSymbol = symbol === "USO" ? "OIL" : symbol;
+      const stock = stocks.find(s => s.symbol === targetSymbol);
+      
       if (stock) {
-        // In a real app, you'd calculate 'change' from daily open
-        // For this demo, we'll update the price and keep a simulated change
-        stock.price = trade.Price;
+        stock.price = price;
         io.emit("market-update", stocks);
       }
     });
@@ -63,10 +70,16 @@ export function setupMarketDataSocket(io: Server) {
     });
 
     cryptoStream.onCryptoTrade((trade: any) => {
-      const symbol = trade.Symbol.split("/")[0];
+      const rawSymbol = trade.symbol || trade.Symbol || trade.S;
+      const price = trade.price || trade.Price || trade.p;
+      
+      if (!rawSymbol || !price) return;
+
+      const symbol = rawSymbol.split("/")[0];
       const stock = stocks.find(s => s.symbol === symbol);
+      
       if (stock) {
-        stock.price = trade.Price;
+        stock.price = price;
         io.emit("market-update", stocks);
       }
     });
