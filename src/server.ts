@@ -45,15 +45,15 @@ async function startServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
   // Global Error Handler
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    console.error(err.stack);
+    console.error("Server Error:", err.stack);
     res.status(500).json({
       error: "Internal Server Error",
-      message: process.env.NODE_ENV === "development" ? err.message : undefined,
+      message: process.env.NODE_ENV === "development" ? err.message : "An unexpected error occurred on the intelligence server.",
     });
   });
 
@@ -73,8 +73,10 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Ravenshire Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Failed to start server:", err);
+});

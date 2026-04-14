@@ -10,8 +10,8 @@ router.post('/', async (req, res) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: message,
+      model: "gemini-2.0-flash",
+      contents: [{ parts: [{ text: message }] }],
       config: {
         systemInstruction: "You are Ravenshire AI, a sophisticated financial intelligence assistant. Provide concise, professional, and data-driven insights. Maintain a high-end institutional tone."
       }

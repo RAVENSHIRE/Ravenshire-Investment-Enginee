@@ -65,6 +65,7 @@ export const StrategySector: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [themeData, setThemeData] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const socket = io();
@@ -97,6 +98,7 @@ export const StrategySector: React.FC = () => {
   const handleGenerate = async () => {
     if (!topic) return;
     setIsGenerating(true);
+    setError(null);
     try {
       const newStrategy = await generateInvestmentStrategy(topic);
       setTheses([newStrategy, ...theses]);
@@ -104,6 +106,7 @@ export const StrategySector: React.FC = () => {
       setTopic('');
     } catch (error) {
       console.error("Failed to generate strategy:", error);
+      setError("Intelligence failure: Unable to synthesize investment thesis. Please verify topic parameters.");
     } finally {
       setIsGenerating(false);
     }
@@ -154,6 +157,14 @@ export const StrategySector: React.FC = () => {
                 className="w-full bg-terminal-surface border border-terminal-border p-3 text-sm focus:outline-none focus:border-terminal-accent"
               />
             </div>
+
+            {error && (
+              <div className="p-3 bg-terminal-red/10 border border-terminal-red/30 text-terminal-red text-xs font-mono flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+
             <button 
               onClick={handleGenerate}
               disabled={isGenerating || !topic}

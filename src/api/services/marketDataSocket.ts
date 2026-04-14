@@ -31,65 +31,68 @@ export function setupMarketDataSocket(io: Server) {
     });
 
     const stockStream = alpaca.data_stream_v2;
-    const cryptoStream = (alpaca as any).crypto_stream_v2;
+    const cryptoStream = (alpaca as any).crypto_stream_v1beta3;
 
     const stockSymbols = ["NVDA", "SPY", "LLY", "CEG", "TSLA", "RDW", "OKLO", "PL", "USO"];
     const cryptoSymbols = ["BTC/USD", "SOL/USD"];
 
     // Handle Stock Updates
-    stockStream.onConnect(() => {
-      console.log("Alpaca Stock Stream Connected");
-      stockStream.subscribeForTrades(stockSymbols);
-    });
+    if (stockStream) {
+      stockStream.onConnect(() => {
+        console.log("Alpaca Stock Stream Connected");
+        stockStream.subscribeForTrades(stockSymbols);
+      });
 
-    stockStream.onStockTrade((trade: any) => {
-      // Alpaca SDK v2 maps raw 'S' to 'symbol' and 'p' to 'price'
-      const symbol = trade.symbol || trade.Symbol || trade.S;
-      const price = trade.price || trade.Price || trade.p;
+      stockStream.onStockTrade((trade: any) => {
+        const symbol = trade.symbol || trade.Symbol || trade.S;
+        const price = trade.price || trade.Price || trade.p;
+        
+        if (!symbol || !price) return;
+
+        const targetSymbol = symbol === "USO" ? "OIL" : symbol;
+        const stock = stocks.find(s => s.symbol === targetSymbol);
+        
+        if (stock) {
+          stock.price = price;
+          io.emit("market-update", stocks);
+        }
+      });
+
+      stockStream.onError((err: any) => {
+        console.error("Alpaca Stock Stream Error:", err);
+      });
       
-      if (!symbol || !price) return;
-
-      // Map USO back to OIL for the UI if needed
-      const targetSymbol = symbol === "USO" ? "OIL" : symbol;
-      const stock = stocks.find(s => s.symbol === targetSymbol);
-      
-      if (stock) {
-        stock.price = price;
-        io.emit("market-update", stocks);
-      }
-    });
-
-    stockStream.onError((err: any) => {
-      console.error("Alpaca Stock Stream Error:", err);
-    });
+      stockStream.connect();
+    }
 
     // Handle Crypto Updates
-    cryptoStream.onConnect(() => {
-      console.log("Alpaca Crypto Stream Connected");
-      cryptoStream.subscribeForTrades(cryptoSymbols);
-    });
+    if (cryptoStream) {
+      cryptoStream.onConnect(() => {
+        console.log("Alpaca Crypto Stream Connected");
+        cryptoStream.subscribeForTrades(cryptoSymbols);
+      });
 
-    cryptoStream.onCryptoTrade((trade: any) => {
-      const rawSymbol = trade.symbol || trade.Symbol || trade.S;
-      const price = trade.price || trade.Price || trade.p;
+      cryptoStream.onCryptoTrade((trade: any) => {
+        const rawSymbol = trade.symbol || trade.Symbol || trade.S;
+        const price = trade.price || trade.Price || trade.p;
+        
+        if (!rawSymbol || !price) return;
+
+        const symbol = rawSymbol.split("/")[0];
+        const stock = stocks.find(s => s.symbol === symbol);
+        
+        if (stock) {
+          stock.price = price;
+          io.emit("market-update", stocks);
+        }
+      });
+
+      cryptoStream.onError((err: any) => {
+        console.error("Alpaca Crypto Stream Error:", err);
+      });
       
-      if (!rawSymbol || !price) return;
-
-      const symbol = rawSymbol.split("/")[0];
-      const stock = stocks.find(s => s.symbol === symbol);
-      
-      if (stock) {
-        stock.price = price;
-        io.emit("market-update", stocks);
-      }
-    });
-
-    cryptoStream.onError((err: any) => {
-      console.error("Alpaca Crypto Stream Error:", err);
-    });
-
-    stockStream.connect();
-    cryptoStream.connect();
+      cryptoStream.connect();
+    }
 
   } else {
     console.warn("Alpaca API keys missing. Falling back to simulated market data.");
