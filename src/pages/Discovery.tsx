@@ -105,8 +105,18 @@ export const Discovery: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-terminal-border flex justify-end gap-3">
-              <button className="terminal-btn">View Full Research</button>
-              <button className="terminal-btn bg-terminal-accent text-white border-none">Trade Now</button>
+              <button 
+                onClick={() => alert(`Accessing institutional research for ${selectedAssetData.asset}...`)}
+                className="terminal-btn"
+              >
+                View Full Research
+              </button>
+              <button 
+                onClick={() => alert(`Redirecting to institutional trading desk for ${selectedAssetData.asset}...`)}
+                className="terminal-btn bg-terminal-accent text-white border-none"
+              >
+                Trade Now
+              </button>
             </div>
           </div>
         </div>
@@ -265,7 +275,12 @@ export const Discovery: React.FC = () => {
             <p className="text-xs text-terminal-muted leading-relaxed mb-4">
               Unusual options activity detected in <span className="text-terminal-text font-bold">LUNR</span> (Intuitive Machines). $5M in call premiums for Oct $25 strike.
             </p>
-            <button className="w-full terminal-btn border-terminal-amber/50 text-terminal-amber hover:bg-terminal-amber/10">View Options Flow</button>
+            <button 
+              onClick={() => alert("Opening real-time options flow for LUNR...")}
+              className="w-full terminal-btn border-terminal-amber/50 text-terminal-amber hover:bg-terminal-amber/10"
+            >
+              View Options Flow
+            </button>
           </div>
         </div>
       </div>

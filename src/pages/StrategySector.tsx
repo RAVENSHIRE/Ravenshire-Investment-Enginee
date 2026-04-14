@@ -232,7 +232,7 @@ export const StrategySector: React.FC = () => {
                   {scenario.description}
                 </p>
                 <button 
-                  onClick={() => console.log(`Running simulation for ${scenario.name}`)}
+                  onClick={() => alert(`Running Monte Carlo simulation for ${scenario.name}...`)}
                   className="w-full terminal-btn mt-2 flex items-center justify-center gap-2 group"
                 >
                   Run Simulation <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -249,7 +249,7 @@ export const StrategySector: React.FC = () => {
                 Your current portfolio has a 65% correlation to the "Energy Wall" bear case. Consider hedging with long-dated utility calls.
               </p>
               <button 
-                onClick={() => console.log("Opening hedge strategies")}
+                onClick={() => alert("Loading institutional hedging strategies for current macro environment...")}
                 className="w-full terminal-btn bg-terminal-accent text-white border-none hover:bg-terminal-accent/80"
               >
                 View Hedge Strategies

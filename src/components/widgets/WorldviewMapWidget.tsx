@@ -21,29 +21,36 @@ const DEPENDENCIES: Dependency[] = [
 export const WorldviewMapWidget: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [progress, setProgress] = useState(0);
+  const [dependencies, setDependencies] = useState<Dependency[]>([]);
 
   useEffect(() => {
+    const fetchSupplyChainData = async () => {
+      try {
+        const response = await fetch('/api/supply-chain');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        setDependencies(data);
+        setStatus('ready');
+      } catch (error) {
+        console.error('Supply Chain Fetch Error:', error);
+        setStatus('error');
+      }
+    };
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setStatus('ready');
           return 100;
         }
         return prev + Math.random() * 15;
       });
     }, 200);
 
-    const timeout = setTimeout(() => {
-      if (status === 'loading') {
-        // Fallback if it takes too long
-        setStatus('ready');
-      }
-    }, 5000);
+    fetchSupplyChainData();
 
     return () => {
       clearInterval(interval);
-      clearTimeout(timeout);
     };
   }, []);
 
@@ -141,7 +148,7 @@ export const WorldviewMapWidget: React.FC = () => {
                 <Ship className="w-3 h-3" /> Critical Dependencies
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {DEPENDENCIES.map((dep, i) => (
+                {dependencies.map((dep, i) => (
                   <div key={i} className="space-y-1">
                     <div className="flex justify-between text-[10px] font-mono">
                       <span className="text-terminal-text">{dep.from} → {dep.to}</span>

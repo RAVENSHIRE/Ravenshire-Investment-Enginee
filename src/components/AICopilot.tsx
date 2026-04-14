@@ -9,19 +9,33 @@ export const AICopilot: React.FC = () => {
   const [chat, setChat] = useState<{ role: 'user' | 'ai', text: string }[]>([
     { role: 'ai', text: 'Terminal AI initialized. How can I assist your market analysis today?' }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setChat([...chat, { role: 'user', text: message }]);
-    setMessage('');
+  const handleSend = async (customMessage?: string) => {
+    const msgToSend = customMessage || message;
+    if (!msgToSend.trim() || isLoading) return;
     
-    // Simulate AI response
-    setTimeout(() => {
-      setChat(prev => [...prev, { 
-        role: 'ai', 
-        text: `Analyzing "${message}"... Based on current institutional flow and macro indicators, I detect a structural shift in the energy-compute nexus. Would you like me to run a scenario model for SMR adoption?` 
-      }]);
-    }, 1000);
+    setChat(prev => [...prev, { role: 'user', text: msgToSend }]);
+    if (!customMessage) setMessage('');
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msgToSend }),
+      });
+
+      if (!response.ok) throw new Error("Failed to chat");
+      const data = await response.json();
+      
+      setChat(prev => [...prev, { role: 'ai', text: data.response }]);
+    } catch (error) {
+      console.error("AI Chat Error:", error);
+      setChat(prev => [...prev, { role: 'ai', text: "Error: Failed to connect to AI engine." }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,7 +62,7 @@ export const AICopilot: React.FC = () => {
             <div className="p-3 border-b border-terminal-border bg-terminal-bg flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-terminal-accent" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest">AI Market Copilot <span className="text-terminal-green">Online</span></span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest">AI Market Copilot <span className="text-terminal-green">{isLoading ? 'Processing...' : 'Online'}</span></span>
               </div>
               <button onClick={() => setIsOpen(false)} className="text-terminal-muted hover:text-terminal-text">
                 <X className="w-4 h-4" />
@@ -73,6 +87,13 @@ export const AICopilot: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex items-start">
+                  <div className="bg-terminal-bg border border-terminal-border p-3 text-terminal-muted animate-pulse">
+                    Thinking...
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input Area */}
@@ -84,18 +105,32 @@ export const AICopilot: React.FC = () => {
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Ask about markets, news, or strategies..."
-                  className="w-full bg-terminal-surface border border-terminal-border py-2 pl-3 pr-10 text-xs font-mono focus:outline-none focus:border-terminal-accent"
+                  disabled={isLoading}
+                  className="w-full bg-terminal-surface border border-terminal-border py-2 pl-3 pr-10 text-xs font-mono focus:outline-none focus:border-terminal-accent disabled:opacity-50"
                 />
                 <button 
-                  onClick={handleSend}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-terminal-muted hover:text-terminal-accent"
+                  onClick={() => handleSend()}
+                  disabled={isLoading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-terminal-muted hover:text-terminal-accent disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
               <div className="mt-2 flex gap-2">
-                <button className="text-[9px] font-mono text-terminal-muted hover:text-terminal-accent uppercase border border-terminal-border px-1.5 py-0.5">Why is oil up?</button>
-                <button className="text-[9px] font-mono text-terminal-muted hover:text-terminal-accent uppercase border border-terminal-border px-1.5 py-0.5">NVDA Analysis</button>
+                <button 
+                  onClick={() => handleSend("Why is oil up?")}
+                  disabled={isLoading}
+                  className="text-[9px] font-mono text-terminal-muted hover:text-terminal-accent uppercase border border-terminal-border px-1.5 py-0.5 disabled:opacity-50"
+                >
+                  Why is oil up?
+                </button>
+                <button 
+                  onClick={() => handleSend("NVDA Analysis")}
+                  disabled={isLoading}
+                  className="text-[9px] font-mono text-terminal-muted hover:text-terminal-accent uppercase border border-terminal-border px-1.5 py-0.5 disabled:opacity-50"
+                >
+                  NVDA Analysis
+                </button>
               </div>
             </div>
           </motion.div>

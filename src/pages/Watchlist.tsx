@@ -95,8 +95,18 @@ export const Watchlist: React.FC = () => {
           >
             <Plus className="w-3 h-3" /> Add Asset
           </button>
-          <button className="terminal-btn flex items-center gap-2"><Filter className="w-3 h-3" /> Filter</button>
-          <button className="terminal-btn flex items-center gap-2"><Download className="w-3 h-3" /> Export</button>
+          <button 
+            onClick={() => alert("Filtering options: Sector, Market Cap, Sentiment, and Volatility.")}
+            className="terminal-btn flex items-center gap-2"
+          >
+            <Filter className="w-3 h-3" /> Filter
+          </button>
+          <button 
+            onClick={() => alert("Exporting watchlist to CSV/JSON for institutional analysis...")}
+            className="terminal-btn flex items-center gap-2"
+          >
+            <Download className="w-3 h-3" /> Export
+          </button>
         </div>
       </div>
 

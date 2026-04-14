@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { SettingsModal } from '../SettingsModal';
+
 const navItems = [
   { icon: Globe, label: 'Worldview', path: '/' },
   { icon: BrainCircuit, label: 'Strategy', path: '/strategy' },
@@ -24,6 +26,8 @@ const navItems = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const [showSettings, setShowSettings] = React.useState(false);
+
   return (
     <aside className="w-16 md:w-48 bg-terminal-bg border-r border-terminal-border flex flex-col h-screen sticky top-0">
       <div className="p-4 border-b border-terminal-border flex items-center gap-2">
@@ -63,11 +67,16 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
         
-        <button className="w-full flex items-center gap-3 px-0 md:px-4 py-2 text-xs font-mono text-terminal-muted hover:text-terminal-text transition-colors">
+        <button 
+          onClick={() => setShowSettings(true)}
+          className="w-full flex items-center gap-3 px-0 md:px-4 py-2 text-xs font-mono text-terminal-muted hover:text-terminal-text transition-colors"
+        >
           <Settings className="w-5 h-5 shrink-0" />
           <span className="hidden md:block uppercase tracking-widest">Settings</span>
         </button>
       </div>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </aside>
   );
 };
